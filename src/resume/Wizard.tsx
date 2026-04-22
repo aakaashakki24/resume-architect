@@ -6,9 +6,11 @@ import {
   Check,
   Download,
   FileText,
+  Info,
   Loader2,
   Plus,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
   Target,
   Trash2,
@@ -18,6 +20,13 @@ import {
 } from "lucide-react";
 import { useResume } from "./ResumeContext";
 import type { TemplateId } from "./types";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const STEPS = [
   { id: 1, label: "Ingest" },
