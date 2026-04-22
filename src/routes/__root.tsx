@@ -29,11 +29,19 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Resume Forge — Tailor your resume for any role" },
+      {
+        name: "description",
+        content:
+          "An advanced resume builder with a live A4 preview. Edit on the left, watch your PDF-perfect resume update in real time on the right.",
+      },
+      { name: "author", content: "Resume Forge" },
+      { property: "og:title", content: "Resume Forge" },
+      {
+        property: "og:description",
+        content:
+          "Tailor your resume for any role with a real-time A4 live preview.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },

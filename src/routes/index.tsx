@@ -1,26 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { ResumeProvider } from "@/resume/ResumeContext";
+import { Wizard } from "@/resume/Wizard";
+import { A4Preview } from "@/resume/A4Preview";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
-  return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
-  );
-}
-
 function Index() {
-  return <PlaceholderIndex />;
+  return (
+    <ResumeProvider>
+      <main className="grid h-screen w-screen grid-cols-1 overflow-hidden bg-background lg:grid-cols-2">
+        {/* Left: Wizard (scrollable) */}
+        <section className="h-screen overflow-hidden border-r border-border">
+          <Wizard />
+        </section>
+        {/* Right: Sticky live A4 preview */}
+        <aside className="sticky top-0 hidden h-screen lg:block">
+          <A4Preview />
+        </aside>
+      </main>
+    </ResumeProvider>
+  );
 }
