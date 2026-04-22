@@ -37,6 +37,10 @@ interface ResumeContextValue {
   autoRewrite: () => Promise<void>;
   rewritten: boolean;
 
+  /** Strict Mode: rephrase-only, zero-hallucination guarantee. */
+  strictMode: boolean;
+  setStrictMode: (v: boolean) => void;
+
   template: TemplateId;
   setTemplate: (t: TemplateId) => void;
 
@@ -68,6 +72,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewritten, setRewritten] = useState(false);
   const [template, setTemplate] = useState<TemplateId>("executive");
+  const [strictMode, setStrictMode] = useState(true);
 
   const setField = useCallback((field: ScalarKey, value: string) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -114,7 +119,13 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...prev,
       experience: prev.experience.map((item) =>
         item.id === experienceId
-          ? { ...item, bullets: [...item.bullets, ""] }
+          ? {
+              ...item,
+              bullets: [...item.bullets, ""],
+              originalBullets: item.originalBullets
+                ? [...item.originalBullets, ""]
+                : item.originalBullets,
+            }
           : item,
       ),
     }));
@@ -142,6 +153,9 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         return {
           ...item,
           bullets: item.bullets.filter((_, i) => i !== index),
+          originalBullets: item.originalBullets
+            ? item.originalBullets.filter((_, i) => i !== index)
+            : item.originalBullets,
         };
       }),
     }));
@@ -185,16 +199,17 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setRewritten(false);
     setIsRewriting(false);
     setTemplate("executive");
+    setStrictMode(true);
   }, []);
 
   const autoRewrite = useCallback(async () => {
     setIsRewriting(true);
     await new Promise((r) => setTimeout(r, 2000));
-    setResume((prev) => rewriteResumeForTarget(prev));
+    setResume((prev) => rewriteResumeForTarget(prev, strictMode));
     setRewritten(true);
     setIsRewriting(false);
     setEditorView("edit");
-  }, []);
+  }, [strictMode]);
 
   const gapAnalysis = useMemo(() => computeGapAnalysis(resume.skills), [resume.skills]);
 
@@ -214,6 +229,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       rewritten,
       template,
       setTemplate,
+      strictMode,
+      setStrictMode,
       setField,
       updateExperience,
       addExperience,
@@ -237,6 +254,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       autoRewrite,
       rewritten,
       template,
+      strictMode,
       setField,
       updateExperience,
       addExperience,
