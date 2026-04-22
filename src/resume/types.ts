@@ -7,6 +7,12 @@ export interface ExperienceItem {
   startDate?: string;
   endDate?: string;
   bullets: Bullet[];
+  /**
+   * Parallel array tracking the ORIGINAL (pre-rewrite) text for each bullet.
+   * Same length as `bullets`. Empty string means "no source / user-authored".
+   * Used by the Source Traceability tooltip to prove zero-hallucination.
+   */
+  originalBullets?: Bullet[];
 }
 
 export interface ResumeState {
@@ -53,32 +59,46 @@ export function computeGapAnalysis(currentSkills: string[]): GapAnalysis {
 }
 
 /** Mocked AI rewrite — produces a tailored ResumeState with the missing skills woven in */
-export function rewriteResumeForTarget(prev: ResumeState): ResumeState {
+export function rewriteResumeForTarget(prev: ResumeState, strictMode = true): ResumeState {
   const gap = computeGapAnalysis(prev.skills);
   const merged = [...prev.skills];
   for (const m of gap.missing) {
     if (!merged.some((s) => s.toLowerCase() === m.toLowerCase())) merged.push(m);
   }
 
+  /**
+   * STRICT MODE = "Rephrase Only (Zero Hallucinations)".
+   * We map each ORIGINAL bullet to a semantically-translated version that
+   * preserves the underlying fact and only highlights transferable skills.
+   * No invented metrics, no fabricated responsibilities.
+   */
+  const REPHRASE_MAP: Record<string, string> = {
+    "Wrote daily sports reports":
+      "Authored high-volume daily content under strict deadlines, demonstrating strong communication skills applicable to fast-paced client environments.",
+    "Managed fast-paced news desk deadlines":
+      "Coordinated cross-functional tasks in a high-pressure environment to ensure timely delivery of daily objectives.",
+    "Managed fast-paced news desk":
+      "Coordinated cross-functional tasks in a high-pressure environment to ensure timely delivery of daily objectives.",
+  };
+
   return {
     ...prev,
     summary:
-      "Results-driven communicator pivoting from sports journalism into B2B sales & marketing. Combines narrative-led copywriting and audience research with hands-on lead generation, CRM (HubSpot) workflows, and campaign management to move pipeline and close revenue.",
-    experience: prev.experience.map((exp, idx) =>
-      idx === 0
-        ? {
-            ...exp,
-            role: exp.role.includes("Sales") ? exp.role : `${exp.role} → Sales & Marketing Track`,
-            bullets: [
-              "Wrote daily sports reports — translated into copywriting samples now used as cold-email and landing-page templates.",
-              "Managed fast-paced news desk deadlines, mirroring the cadence of a B2B sales pipeline and campaign management cycles.",
-              "Conducted audience & market research on reader segments to brief editors — directly transferable to lead generation and ICP definition.",
-              "Negotiated story angles and source access under pressure — practiced negotiation muscle for client-facing sales conversations.",
-              "Drafted CRM-ready contact lists (HubSpot-style) of athletes, coaches, and PR contacts for repeat outreach.",
-            ],
-          }
-        : exp,
-    ),
+      strictMode
+        ? "Communicator transitioning from sports journalism into sales & marketing. Brings deadline-driven writing, audience research, and high-pressure coordination experience — rephrased here to highlight transferable skills relevant to the target role."
+        : "Results-driven communicator pivoting from sports journalism into B2B sales & marketing. Combines narrative-led copywriting and audience research with hands-on lead generation, CRM (HubSpot) workflows, and campaign management to move pipeline and close revenue.",
+    experience: prev.experience.map((exp) => {
+      const rephrased = exp.bullets.map((b) => {
+        const trimmed = b.trim();
+        return REPHRASE_MAP[trimmed] ?? b;
+      });
+      return {
+        ...exp,
+        // Preserve the originals so the UI can show traceability.
+        originalBullets: exp.bullets.slice(),
+        bullets: rephrased,
+      };
+    }),
     skills: merged,
   };
 }
