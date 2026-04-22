@@ -416,6 +416,10 @@ function StepEdit() {
                         }
                         className="flex-1 rounded-md border border-border bg-background px-2.5 py-1.5 text-sm outline-none focus:border-primary"
                       />
+                      <SourceTraceability
+                        original={exp.originalBullets?.[i]}
+                        current={b}
+                      />
                       <button
                         type="button"
                         onClick={() => removeBullet(exp.id, i)}
@@ -565,7 +569,16 @@ function StepExport() {
 /* ----------------------------- GAP ANALYSIS ----------------------------- */
 
 function GapAnalysisPanel() {
-  const { gapAnalysis, isRewriting, autoRewrite, resume, setEditorView, rewritten } = useResume();
+  const {
+    gapAnalysis,
+    isRewriting,
+    autoRewrite,
+    resume,
+    setEditorView,
+    rewritten,
+    strictMode,
+    setStrictMode,
+  } = useResume();
   const total = gapAnalysis.matching.length + gapAnalysis.missing.length;
   const matchPct = total === 0 ? 0 : Math.round((gapAnalysis.matching.length / total) * 100);
 
@@ -626,6 +639,7 @@ function GapAnalysisPanel() {
       </div>
 
       <div className="space-y-3">
+        <StrictModeToggle checked={strictMode} onChange={setStrictMode} disabled={isRewriting} />
         <motion.button
           type="button"
           onClick={autoRewrite}
