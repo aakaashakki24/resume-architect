@@ -6,7 +6,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { initialResume, type ExperienceItem, type ResumeState } from "./types";
+import {
+  computeGapAnalysis,
+  initialResume,
+  rewriteResumeForTarget,
+  type ExperienceItem,
+  type GapAnalysis,
+  type ResumeState,
+  type TemplateId,
+} from "./types";
 
 type ScalarKey = {
   [K in keyof ResumeState]: ResumeState[K] extends string ? K : never;
@@ -19,6 +27,18 @@ interface ResumeContextValue {
   analyzed: boolean;
   runAnalysis: () => void;
   resetResume: () => void;
+
+  /** Step-2 sub-view: 'gap' (analysis dashboard) or 'edit' (form editor) */
+  editorView: "gap" | "edit";
+  setEditorView: (v: "gap" | "edit") => void;
+
+  gapAnalysis: GapAnalysis;
+  isRewriting: boolean;
+  autoRewrite: () => Promise<void>;
+  rewritten: boolean;
+
+  template: TemplateId;
+  setTemplate: (t: TemplateId) => void;
 
   setField: (field: ScalarKey, value: string) => void;
 
@@ -44,6 +64,10 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [resume, setResume] = useState<ResumeState>(initialResume);
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [analyzed, setAnalyzed] = useState(false);
+  const [editorView, setEditorView] = useState<"gap" | "edit">("gap");
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [rewritten, setRewritten] = useState(false);
+  const [template, setTemplate] = useState<TemplateId>("executive");
 
   const setField = useCallback((field: ScalarKey, value: string) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -150,13 +174,29 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const runAnalysis = useCallback(() => {
     setAnalyzed(true);
     setStep(2);
+    setEditorView("gap");
   }, []);
 
   const resetResume = useCallback(() => {
     setResume(initialResume);
     setAnalyzed(false);
     setStep(1);
+    setEditorView("gap");
+    setRewritten(false);
+    setIsRewriting(false);
+    setTemplate("executive");
   }, []);
+
+  const autoRewrite = useCallback(async () => {
+    setIsRewriting(true);
+    await new Promise((r) => setTimeout(r, 2000));
+    setResume((prev) => rewriteResumeForTarget(prev));
+    setRewritten(true);
+    setIsRewriting(false);
+    setEditorView("edit");
+  }, []);
+
+  const gapAnalysis = useMemo(() => computeGapAnalysis(resume.skills), [resume.skills]);
 
   const value = useMemo<ResumeContextValue>(
     () => ({
@@ -166,6 +206,14 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       analyzed,
       runAnalysis,
       resetResume,
+      editorView,
+      setEditorView,
+      gapAnalysis,
+      isRewriting,
+      autoRewrite,
+      rewritten,
+      template,
+      setTemplate,
       setField,
       updateExperience,
       addExperience,
@@ -183,6 +231,12 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       analyzed,
       runAnalysis,
       resetResume,
+      editorView,
+      gapAnalysis,
+      isRewriting,
+      autoRewrite,
+      rewritten,
+      template,
       setField,
       updateExperience,
       addExperience,
