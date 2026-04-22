@@ -37,6 +37,10 @@ interface ResumeContextValue {
   autoRewrite: () => Promise<void>;
   rewritten: boolean;
 
+  /** Strict Mode: rephrase-only, zero-hallucination guarantee. */
+  strictMode: boolean;
+  setStrictMode: (v: boolean) => void;
+
   template: TemplateId;
   setTemplate: (t: TemplateId) => void;
 
