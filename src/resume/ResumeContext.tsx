@@ -119,7 +119,13 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       ...prev,
       experience: prev.experience.map((item) =>
         item.id === experienceId
-          ? { ...item, bullets: [...item.bullets, ""] }
+          ? {
+              ...item,
+              bullets: [...item.bullets, ""],
+              originalBullets: item.originalBullets
+                ? [...item.originalBullets, ""]
+                : item.originalBullets,
+            }
           : item,
       ),
     }));
@@ -147,6 +153,9 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
         return {
           ...item,
           bullets: item.bullets.filter((_, i) => i !== index),
+          originalBullets: item.originalBullets
+            ? item.originalBullets.filter((_, i) => i !== index)
+            : item.originalBullets,
         };
       }),
     }));
