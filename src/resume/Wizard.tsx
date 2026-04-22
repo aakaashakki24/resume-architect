@@ -1,16 +1,23 @@
 import { useState, type DragEvent } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   CheckCircle2,
+  Check,
   Download,
   FileText,
+  Loader2,
   Plus,
   RefreshCw,
   Sparkles,
+  Target,
   Trash2,
   Upload,
+  Wand2,
   X,
 } from "lucide-react";
 import { useResume } from "./ResumeContext";
+import type { TemplateId } from "./types";
 
 const STEPS = [
   { id: 1, label: "Ingest" },
