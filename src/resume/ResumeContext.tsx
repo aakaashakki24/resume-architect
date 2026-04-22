@@ -72,6 +72,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewritten, setRewritten] = useState(false);
   const [template, setTemplate] = useState<TemplateId>("executive");
+  const [strictMode, setStrictMode] = useState(true);
 
   const setField = useCallback((field: ScalarKey, value: string) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -189,16 +190,17 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setRewritten(false);
     setIsRewriting(false);
     setTemplate("executive");
+    setStrictMode(true);
   }, []);
 
   const autoRewrite = useCallback(async () => {
     setIsRewriting(true);
     await new Promise((r) => setTimeout(r, 2000));
-    setResume((prev) => rewriteResumeForTarget(prev));
+    setResume((prev) => rewriteResumeForTarget(prev, strictMode));
     setRewritten(true);
     setIsRewriting(false);
     setEditorView("edit");
-  }, []);
+  }, [strictMode]);
 
   const gapAnalysis = useMemo(() => computeGapAnalysis(resume.skills), [resume.skills]);
 
@@ -218,6 +220,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       rewritten,
       template,
       setTemplate,
+      strictMode,
+      setStrictMode,
       setField,
       updateExperience,
       addExperience,
@@ -241,6 +245,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       autoRewrite,
       rewritten,
       template,
+      strictMode,
       setField,
       updateExperience,
       addExperience,
