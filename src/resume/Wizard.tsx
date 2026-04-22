@@ -259,17 +259,32 @@ function StepEdit() {
     addSkill,
     updateSkill,
     removeSkill,
+    editorView,
+    setEditorView,
   } = useResume();
 
   const [skillDraft, setSkillDraft] = useState("");
 
+  if (editorView === "gap") {
+    return <GapAnalysisPanel />;
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <SectionHeader
-        eyebrow="Step 02"
-        title="Tune the narrative"
-        description="Edit anything below — every keystroke updates the live A4 preview on the right."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <SectionHeader
+          eyebrow="Step 02 · Editor"
+          title="Tune the narrative"
+          description="Every keystroke updates the live A4 preview on the right. Tweak anything the AI generated — it's your story."
+        />
+        <button
+          type="button"
+          onClick={() => setEditorView("gap")}
+          className="inline-flex flex-none items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Target className="h-3.5 w-3.5" /> Gap analysis
+        </button>
+      </div>
 
       <Card title="Identity">
         <Grid2>
