@@ -804,6 +804,123 @@ function TemplateThumb({ id }: { id: TemplateId }) {
 
 /* ----------------------------- helpers ----------------------------- */
 
+/**
+ * Strict Mode toggle — surfaces the "Rephrase Only (Zero Hallucinations)"
+ * guarantee directly above the Auto-Rewrite CTA. Active state is green to
+ * signal a safety / trust affordance.
+ */
+function StrictModeToggle({
+  checked,
+  onChange,
+  disabled,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-xl border p-4 transition-colors ${
+        checked
+          ? "border-emerald-500/40 bg-emerald-500/5"
+          : "border-border bg-background"
+      }`}
+    >
+      <div
+        className={`mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full ${
+          checked
+            ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+            : "bg-muted text-muted-foreground"
+        }`}
+      >
+        <ShieldCheck className="h-4 w-4" />
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between gap-3">
+          <label
+            htmlFor="strict-mode-switch"
+            className="cursor-pointer text-sm font-semibold text-foreground"
+          >
+            Strict Mode: Rephrase Only{" "}
+            <span
+              className={
+                checked
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : "text-muted-foreground"
+              }
+            >
+              (Zero Hallucinations)
+            </span>
+          </label>
+          <Switch
+            id="strict-mode-switch"
+            checked={checked}
+            onCheckedChange={onChange}
+            disabled={disabled}
+            className="data-[state=checked]:bg-emerald-500"
+          />
+        </div>
+        <p className="mt-1 text-[11.5px] leading-snug text-muted-foreground">
+          AI will only rephrase your existing experience to highlight transferable
+          skills. It will never invent new metrics, responsibilities, or facts.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Source Traceability — small Info icon next to each rewritten bullet.
+ * Hover/focus reveals the ORIGINAL bullet it was derived from, proving the
+ * rewrite is a semantic translation rather than a hallucination.
+ * Renders nothing when there is no source (user-authored bullet).
+ */
+function SourceTraceability({
+  original,
+  current,
+}: {
+  original?: string;
+  current: string;
+}) {
+  const hasSource = !!original && original.trim().length > 0;
+  const wasRewritten = hasSource && original!.trim() !== current.trim();
+
+  if (!hasSource) {
+    return <span className="w-7 flex-none" aria-hidden />;
+  }
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label="Show original source bullet"
+            className={`flex h-7 w-7 flex-none items-center justify-center rounded-md border transition-colors ${
+              wasRewritten
+                ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
+                : "border-border bg-background text-muted-foreground hover:bg-muted"
+            }`}
+          >
+            <Info className="h-3.5 w-3.5" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="left" className="max-w-xs">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Original source
+          </p>
+          <p className="mt-1 text-xs leading-snug">{original}</p>
+          {wasRewritten && (
+            <p className="mt-2 text-[10px] italic text-muted-foreground">
+              Rephrased — same fact, sales-aligned framing.
+            </p>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 function SectionHeader({
   eyebrow,
   title,
