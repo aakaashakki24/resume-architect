@@ -1,16 +1,23 @@
 import { useState, type DragEvent } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { toast } from "sonner";
 import {
   CheckCircle2,
+  Check,
   Download,
   FileText,
+  Loader2,
   Plus,
   RefreshCw,
   Sparkles,
+  Target,
   Trash2,
   Upload,
+  Wand2,
   X,
 } from "lucide-react";
 import { useResume } from "./ResumeContext";
+import type { TemplateId } from "./types";
 
 const STEPS = [
   { id: 1, label: "Ingest" },
@@ -252,17 +259,32 @@ function StepEdit() {
     addSkill,
     updateSkill,
     removeSkill,
+    editorView,
+    setEditorView,
   } = useResume();
 
   const [skillDraft, setSkillDraft] = useState("");
 
+  if (editorView === "gap") {
+    return <GapAnalysisPanel />;
+  }
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <SectionHeader
-        eyebrow="Step 02"
-        title="Tune the narrative"
-        description="Edit anything below — every keystroke updates the live A4 preview on the right."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <SectionHeader
+          eyebrow="Step 02 · Editor"
+          title="Tune the narrative"
+          description="Every keystroke updates the live A4 preview on the right. Tweak anything the AI generated — it's your story."
+        />
+        <button
+          type="button"
+          onClick={() => setEditorView("gap")}
+          className="inline-flex flex-none items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Target className="h-3.5 w-3.5" /> Gap analysis
+        </button>
+      </div>
 
       <Card title="Identity">
         <Grid2>
@@ -462,28 +484,296 @@ function StepEdit() {
 /* ----------------------------- STEP 3 ----------------------------- */
 
 function StepExport() {
+  const { template, setTemplate } = useResume();
+
+  const onDownload = () => {
+    toast.success("System Ready", {
+      description: "PDF rendering engine will be attached in the backend environment.",
+    });
+  };
+
   return (
-    <div className="mx-auto max-w-xl space-y-8 text-center">
+    <div className="mx-auto max-w-2xl space-y-8">
       <SectionHeader
-        eyebrow="Step 03"
-        title="Your resume is ready"
-        description="Download a pixel-perfect PDF or jump back to refine the content."
+        eyebrow="Step 03 · Style & export"
+        title="Pick a style, then ship it"
+        description="Three structural templates — switch live, no data loss. Your A4 preview re-renders instantly."
       />
-      <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-muted/30 px-6 py-10">
+
+      <Card title="Select Resume Style">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {TEMPLATE_OPTIONS.map((opt) => {
+            const active = template === opt.id;
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setTemplate(opt.id)}
+                className={`group relative flex flex-col gap-3 rounded-xl border p-3 text-left transition-all ${
+                  active
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-border bg-background hover:border-primary/50 hover:bg-muted/30"
+                }`}
+              >
+                {active && (
+                  <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                    <Check className="h-3 w-3" />
+                  </span>
+                )}
+                <TemplateThumb id={opt.id} />
+                <div>
+                  <p className="text-sm font-semibold">{opt.label}</p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+                    {opt.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-border bg-muted/30 px-6 py-10 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
           <FileText className="h-7 w-7" />
         </div>
         <p className="max-w-sm text-sm text-muted-foreground">
-          PDF generation is wired in the next milestone. The button below is a
-          placeholder for the export pipeline.
+          Your resume is rendered with the <strong className="text-foreground">{TEMPLATE_OPTIONS.find((t) => t.id === template)?.label}</strong> template. Hit the button below to export.
         </p>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-5 py-3 text-sm font-semibold text-background transition-transform hover:-translate-y-0.5"
+          onClick={onDownload}
+          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-lg transition-transform hover:-translate-y-0.5"
         >
           <Download className="h-4 w-4" />
           Download PDF
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ----------------------------- GAP ANALYSIS ----------------------------- */
+
+function GapAnalysisPanel() {
+  const { gapAnalysis, isRewriting, autoRewrite, resume, setEditorView, rewritten } = useResume();
+  const total = gapAnalysis.matching.length + gapAnalysis.missing.length;
+  const matchPct = total === 0 ? 0 : Math.round((gapAnalysis.matching.length / total) * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mx-auto max-w-2xl space-y-8"
+    >
+      <SectionHeader
+        eyebrow="Step 02 · Gap analysis"
+        title="Where you stand vs. the role"
+        description="We compared your resume against the target Job Description. Here's what aligns and what's missing."
+      />
+
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-background to-muted/40 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Match score
+            </p>
+            <p className="mt-1 text-4xl font-bold tracking-tight">
+              {matchPct}
+              <span className="text-xl text-muted-foreground">%</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-muted-foreground">Target role</p>
+            <p className="text-sm font-semibold">{resume.targetRole}</p>
+          </div>
+        </div>
+        <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${matchPct}%` }}
+            transition={{ duration: 0.7, ease: "easeOut" }}
+            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SkillColumn
+          title="Matching skills"
+          count={gapAnalysis.matching.length}
+          tone="match"
+          skills={gapAnalysis.matching}
+          emptyText="No matches yet — hit Auto-Rewrite below."
+        />
+        <SkillColumn
+          title="Missing / gap skills"
+          count={gapAnalysis.missing.length}
+          tone="gap"
+          skills={gapAnalysis.missing}
+          emptyText="Nothing missing. You're aligned."
+        />
+      </div>
+
+      <div className="space-y-3">
+        <motion.button
+          type="button"
+          onClick={autoRewrite}
+          disabled={isRewriting}
+          whileHover={isRewriting ? {} : { y: -2 }}
+          whileTap={isRewriting ? {} : { scale: 0.98 }}
+          className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/80 px-5 py-3.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-colors disabled:opacity-90"
+        >
+          {isRewriting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              AI is rewriting your resume…
+            </>
+          ) : (
+            <>
+              <Wand2 className="h-4 w-4 transition-transform group-hover:rotate-12" />
+              {rewritten ? "Rewrite again" : "Auto-Rewrite with AI"}
+            </>
+          )}
+        </motion.button>
+        {rewritten && !isRewriting && (
+          <button
+            type="button"
+            onClick={() => setEditorView("edit")}
+            className="w-full rounded-xl border border-border bg-background px-5 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+          >
+            Skip to editor →
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function SkillColumn({
+  title,
+  count,
+  tone,
+  skills,
+  emptyText,
+}: {
+  title: string;
+  count: number;
+  tone: "match" | "gap";
+  skills: string[];
+  emptyText: string;
+}) {
+  const dot =
+    tone === "match"
+      ? "bg-emerald-500"
+      : "bg-orange-500";
+  const pill =
+    tone === "match"
+      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+      : "border-orange-500/30 bg-orange-500/10 text-orange-700 dark:text-orange-300";
+
+  return (
+    <div className="rounded-xl border border-border bg-background p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={`h-2 w-2 rounded-full ${dot}`} />
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">
+            {title}
+          </h4>
+        </div>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-mono text-muted-foreground">
+          {count}
+        </span>
+      </div>
+      <AnimatePresence mode="popLayout">
+        {skills.length === 0 ? (
+          <p className="text-xs italic text-muted-foreground">{emptyText}</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {skills.map((s) => (
+              <motion.span
+                key={s}
+                layout
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85 }}
+                transition={{ duration: 0.2 }}
+                className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${pill}`}
+              >
+                {s}
+              </motion.span>
+            ))}
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+/* ----------------------------- TEMPLATES META ----------------------------- */
+
+const TEMPLATE_OPTIONS: {
+  id: TemplateId;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "executive",
+    label: "The Executive",
+    description: "Serif, single column, traditional rules.",
+  },
+  {
+    id: "modern",
+    label: "The Modern",
+    description: "Two columns, soft sidebar background.",
+  },
+  {
+    id: "minimalist",
+    label: "The Minimalist",
+    description: "Sans-serif, generous whitespace.",
+  },
+];
+
+function TemplateThumb({ id }: { id: TemplateId }) {
+  if (id === "executive") {
+    return (
+      <div className="aspect-[1/1.2] w-full rounded-md border border-border bg-paper p-2 text-paper-ink shadow-inner">
+        <div className="border-b-2 border-paper-ink/80 pb-1">
+          <div className="h-2 w-2/3 rounded-sm bg-paper-ink/80" />
+          <div className="mt-0.5 h-1 w-1/3 rounded-sm bg-paper-ink/40" />
+        </div>
+        <div className="mt-2 space-y-1">
+          <div className="h-1 w-full rounded-sm bg-paper-ink/15" />
+          <div className="h-1 w-5/6 rounded-sm bg-paper-ink/15" />
+          <div className="h-1 w-4/6 rounded-sm bg-paper-ink/15" />
+        </div>
+      </div>
+    );
+  }
+  if (id === "modern") {
+    return (
+      <div className="flex aspect-[1/1.2] w-full overflow-hidden rounded-md border border-border bg-paper text-paper-ink shadow-inner">
+        <div className="w-1/3 bg-primary/15 p-1.5 space-y-1">
+          <div className="h-1.5 w-full rounded-sm bg-primary/40" />
+          <div className="h-1 w-3/4 rounded-sm bg-primary/30" />
+          <div className="h-1 w-2/3 rounded-sm bg-primary/30" />
+        </div>
+        <div className="flex-1 p-1.5 space-y-1">
+          <div className="h-1.5 w-1/2 rounded-sm bg-paper-ink/70" />
+          <div className="h-1 w-full rounded-sm bg-paper-ink/15" />
+          <div className="h-1 w-5/6 rounded-sm bg-paper-ink/15" />
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="aspect-[1/1.2] w-full rounded-md border border-border bg-paper p-3 text-paper-ink shadow-inner">
+      <div className="h-2 w-1/2 rounded-sm bg-paper-ink/80" />
+      <div className="mt-1 h-1 w-1/4 rounded-sm bg-paper-ink/30" />
+      <div className="mt-3 space-y-1.5">
+        <div className="h-0.5 w-full bg-paper-ink/10" />
+        <div className="h-0.5 w-5/6 bg-paper-ink/10" />
       </div>
     </div>
   );
