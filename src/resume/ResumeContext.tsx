@@ -15,6 +15,7 @@ import {
   type ResumeState,
   type TemplateId,
 } from "./types";
+import type { AIAnalysisResult } from "@/utils/aiMockEngine";
 
 type ScalarKey = {
   [K in keyof ResumeState]: ResumeState[K] extends string ? K : never;
@@ -36,6 +37,10 @@ interface ResumeContextValue {
   isRewriting: boolean;
   autoRewrite: () => Promise<void>;
   rewritten: boolean;
+
+  /** Result of the mock AI mapping engine. Null until "Analyze & Map" runs. */
+  aiAnalysis: AIAnalysisResult | null;
+  setAiAnalysis: (a: AIAnalysisResult | null) => void;
 
   /** Strict Mode: rephrase-only, zero-hallucination guarantee. */
   strictMode: boolean;
@@ -73,6 +78,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [rewritten, setRewritten] = useState(false);
   const [template, setTemplate] = useState<TemplateId>("executive");
   const [strictMode, setStrictMode] = useState(true);
+  const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
 
   const setField = useCallback((field: ScalarKey, value: string) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -200,6 +206,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setIsRewriting(false);
     setTemplate("executive");
     setStrictMode(true);
+    setAiAnalysis(null);
   }, []);
 
   const autoRewrite = useCallback(async () => {
@@ -231,6 +238,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       setTemplate,
       strictMode,
       setStrictMode,
+      aiAnalysis,
+      setAiAnalysis,
       setField,
       updateExperience,
       addExperience,
@@ -255,6 +264,7 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       rewritten,
       template,
       strictMode,
+      aiAnalysis,
       setField,
       updateExperience,
       addExperience,
