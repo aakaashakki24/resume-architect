@@ -144,12 +144,35 @@ function StepIngest() {
   const [file, setFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
   const [dragOver, setDragOver] = useState(false);
+  const [rawExtractedText, setRawExtractedText] = useState("");
+  const [parsing, setParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+
+  const handleFile = async (f: File) => {
+    setFile(f);
+    setRawExtractedText("");
+    setParseError(null);
+    if (f.type !== "application/pdf") return;
+    setParsing(true);
+    try {
+      const { extractTextFromPDF } = await import("@/utils/pdfParser");
+      const text = await extractTextFromPDF(f);
+      setRawExtractedText(text);
+      // eslint-disable-next-line no-console
+      console.log("[pdfParser] extracted text:", text);
+    } catch (err) {
+      console.error("[pdfParser] failed:", err);
+      setParseError(err instanceof Error ? err.message : "Failed to parse PDF");
+    } finally {
+      setParsing(false);
+    }
+  };
 
   const onDrop = (e: DragEvent<HTMLLabelElement>) => {
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files?.[0];
-    if (f) setFile(f);
+    if (f) void handleFile(f);
   };
 
   return (
@@ -220,9 +243,28 @@ function StepIngest() {
             type="file"
             accept="application/pdf"
             className="sr-only"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) void handleFile(f);
+            }}
           />
         </label>
+        {parsing && (
+          <p className="text-xs text-muted-foreground">Extracting text…</p>
+        )}
+        {parseError && (
+          <p className="text-xs text-destructive">{parseError}</p>
+        )}
+        {rawExtractedText && (
+          <details className="rounded-md border border-border bg-muted/20 p-3 text-xs">
+            <summary className="cursor-pointer font-medium text-muted-foreground">
+              Extracted text preview ({rawExtractedText.length} chars)
+            </summary>
+            <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed text-foreground">
+              {rawExtractedText}
+            </pre>
+          </details>
+        )}
       </div>
 
       <div className="space-y-2">
