@@ -21,6 +21,8 @@ import {
 import { useResume } from "./ResumeContext";
 import type { TemplateId } from "./types";
 import { Switch } from "@/components/ui/switch";
+import { GapAnalysisDashboard } from "@/components/GapAnalysisDashboard";
+import { simulateAIAnalysis } from "@/utils/aiMockEngine";
 import {
   Tooltip,
   TooltipContent,
@@ -140,13 +142,25 @@ function Stepper() {
 /* ----------------------------- STEP 1 ----------------------------- */
 
 function StepIngest() {
-  const { runAnalysis } = useResume();
+  const { runAnalysis, setAiAnalysis, setStrictMode, strictMode } = useResume();
   const [file, setFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
   const [dragOver, setDragOver] = useState(false);
   const [rawExtractedText, setRawExtractedText] = useState("");
   const [parsing, setParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+
+  const handleAnalyzeAndMap = async () => {
+    setAnalyzing(true);
+    try {
+      const result = await simulateAIAnalysis(rawExtractedText, jd);
+      setAiAnalysis(result);
+      runAnalysis();
+    } finally {
+      setAnalyzing(false);
+    }
+  };
 
   const handleFile = async (f: File) => {
     setFile(f);
@@ -291,6 +305,37 @@ function StepIngest() {
         <Sparkles className="h-4 w-4 transition-transform group-hover:rotate-12" />
         Simulate AI Analysis
       </button>
+
+      <button
+        type="button"
+        onClick={handleAnalyzeAndMap}
+        disabled={analyzing}
+        className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 disabled:opacity-80"
+      >
+        {analyzing ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Mapping resume to job description…
+          </>
+        ) : (
+          <>
+            <Wand2 className="h-4 w-4 transition-transform group-hover:rotate-12" />
+            Analyze &amp; Map
+          </>
+        )}
+      </button>
+      {/* keep strict mode reachable from ingest as well */}
+      <p className="text-[11px] text-muted-foreground">
+        Strict Mode is{" "}
+        <button
+          type="button"
+          onClick={() => setStrictMode(!strictMode)}
+          className="font-semibold underline-offset-2 hover:underline"
+        >
+          {strictMode ? "ON" : "OFF"}
+        </button>{" "}
+        — toggle anytime in the Gap Analysis dashboard.
+      </p>
     </div>
   );
 }
@@ -620,9 +665,35 @@ function GapAnalysisPanel() {
     rewritten,
     strictMode,
     setStrictMode,
+    aiAnalysis,
   } = useResume();
   const total = gapAnalysis.matching.length + gapAnalysis.missing.length;
   const matchPct = total === 0 ? 0 : Math.round((gapAnalysis.matching.length / total) * 100);
+
+  // When the mock AI mapping engine has produced a result, prefer the new
+  // 3-column dashboard view (Strong / Transferable / Missing).
+  if (aiAnalysis) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+        className="mx-auto max-w-3xl space-y-8"
+      >
+        <SectionHeader
+          eyebrow="Step 02 · Gap analysis"
+          title="Where you stand vs. the role"
+          description="The mock AI engine mapped your resume against the target Job Description. Review matches before entering the editor."
+        />
+        <GapAnalysisDashboard
+          gapAnalysis={aiAnalysis.gapAnalysis}
+          strictMode={strictMode}
+          onStrictModeChange={setStrictMode}
+          onEnterEditor={() => setEditorView("edit")}
+        />
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
