@@ -23,6 +23,9 @@ import type { TemplateId } from "./types";
 import { Switch } from "@/components/ui/switch";
 import { GapAnalysisDashboard } from "@/components/GapAnalysisDashboard";
 import { simulateAIAnalysis } from "@/utils/aiMockEngine";
+import { GapAnalysisView } from "@/components/GapAnalysisView";
+import { generateGapAnalysis } from "@/utils/analysisLogic";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
   TooltipContent,
@@ -142,7 +145,15 @@ function Stepper() {
 /* ----------------------------- STEP 1 ----------------------------- */
 
 function StepIngest() {
-  const { runAnalysis, setAiAnalysis, setStrictMode, strictMode } = useResume();
+  const {
+    runAnalysis,
+    setAiAnalysis,
+    setStrictMode,
+    strictMode,
+    setGapReport,
+    analyzing: globalAnalyzing,
+    setAnalyzing: setGlobalAnalyzing,
+  } = useResume();
   const [file, setFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
   const [dragOver, setDragOver] = useState(false);
@@ -153,14 +164,45 @@ function StepIngest() {
 
   const handleAnalyzeAndMap = async () => {
     setAnalyzing(true);
+    setGlobalAnalyzing(true);
     try {
-      const result = await simulateAIAnalysis(rawExtractedText, jd);
-      setAiAnalysis(result);
+      const [aiResult, gapReport] = await Promise.all([
+        simulateAIAnalysis(rawExtractedText, jd),
+        generateGapAnalysis(rawExtractedText, jd),
+      ]);
+      setAiAnalysis(aiResult);
+      setGapReport(gapReport);
       runAnalysis();
     } finally {
       setAnalyzing(false);
+      setGlobalAnalyzing(false);
     }
   };
+
+  if (analyzing || globalAnalyzing) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <SectionHeader
+          eyebrow="Step 01 · Analyzing"
+          title="Mapping your resume to the role…"
+          description="Extracting keywords, scoring overlap, and identifying transferable skills."
+        />
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          Running gap analysis…
+        </div>
+        <div className="space-y-3">
+          <Skeleton className="h-24 w-full" />
+          <div className="grid gap-3 md:grid-cols-3">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+          <Skeleton className="h-12 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   const handleFile = async (f: File) => {
     setFile(f);
@@ -666,9 +708,25 @@ function GapAnalysisPanel() {
     strictMode,
     setStrictMode,
     aiAnalysis,
+    gapReport,
   } = useResume();
   const total = gapAnalysis.matching.length + gapAnalysis.missing.length;
   const matchPct = total === 0 ? 0 : Math.round((gapAnalysis.matching.length / total) * 100);
+
+  // Preferred: rich gap report from generateGapAnalysis().
+  if (gapReport) {
+    return (
+      <GapAnalysisView
+        report={gapReport}
+        strictMode={strictMode}
+        onStrictModeChange={setStrictMode}
+        onProceed={() => {
+          if (!rewritten && !isRewriting) void autoRewrite();
+          else setEditorView("edit");
+        }}
+      />
+    );
+  }
 
   // When the mock AI mapping engine has produced a result, prefer the new
   // 3-column dashboard view (Strong / Transferable / Missing).

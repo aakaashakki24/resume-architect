@@ -16,6 +16,7 @@ import {
   type TemplateId,
 } from "./types";
 import type { AIAnalysisResult } from "@/utils/aiMockEngine";
+import type { GapReport } from "@/utils/analysisLogic";
 
 type ScalarKey = {
   [K in keyof ResumeState]: ResumeState[K] extends string ? K : never;
@@ -41,6 +42,14 @@ interface ResumeContextValue {
   /** Result of the mock AI mapping engine. Null until "Analyze & Map" runs. */
   aiAnalysis: AIAnalysisResult | null;
   setAiAnalysis: (a: AIAnalysisResult | null) => void;
+
+  /** Result of generateGapAnalysis (Content Writer → Sales scenario). */
+  gapReport: GapReport | null;
+  setGapReport: (r: GapReport | null) => void;
+
+  /** Global "analysis in progress" flag — used to dim the A4 canvas. */
+  analyzing: boolean;
+  setAnalyzing: (v: boolean) => void;
 
   /** Strict Mode: rephrase-only, zero-hallucination guarantee. */
   strictMode: boolean;
@@ -79,6 +88,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
   const [template, setTemplate] = useState<TemplateId>("executive");
   const [strictMode, setStrictMode] = useState(true);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [gapReport, setGapReport] = useState<GapReport | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
 
   const setField = useCallback((field: ScalarKey, value: string) => {
     setResume((prev) => ({ ...prev, [field]: value }));
@@ -207,6 +218,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
     setTemplate("executive");
     setStrictMode(true);
     setAiAnalysis(null);
+    setGapReport(null);
+    setAnalyzing(false);
   }, []);
 
   const autoRewrite = useCallback(async () => {
@@ -240,6 +253,10 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       setStrictMode,
       aiAnalysis,
       setAiAnalysis,
+      gapReport,
+      setGapReport,
+      analyzing,
+      setAnalyzing,
       setField,
       updateExperience,
       addExperience,
@@ -265,6 +282,8 @@ export function ResumeProvider({ children }: { children: ReactNode }) {
       template,
       strictMode,
       aiAnalysis,
+      gapReport,
+      analyzing,
       setField,
       updateExperience,
       addExperience,
