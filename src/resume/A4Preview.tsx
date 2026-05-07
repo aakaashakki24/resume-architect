@@ -65,10 +65,14 @@ export function A4Preview() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
               style={{ width: PAGE_W, height: PAGE_H }}
+              id="resume-print-target"
             >
               {template === "executive" && <ExecutiveTemplate resume={resume} />}
               {template === "modern" && <ModernTemplate resume={resume} />}
               {template === "minimalist" && <MinimalistTemplate resume={resume} />}
+              {template === "azurill" && <AzurillTemplate resume={resume} />}
+              {template === "onyx" && <OnyxTemplate resume={resume} />}
+              {template === "rhyhorn" && <RhyhornTemplate resume={resume} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -85,6 +89,9 @@ const TEMPLATE_LABEL: Record<TemplateId, string> = {
   executive: "Executive",
   modern: "Modern",
   minimalist: "Minimalist",
+  azurill: "Azurill",
+  onyx: "Onyx",
+  rhyhorn: "Rhyhorn",
 };
 
 /* ============================================================
@@ -358,5 +365,236 @@ function MinimalistTemplate({ resume }: { resume: ResumeState }) {
         </section>
       )}
     </div>
+  );
+}
+
+/* ============================================================
+ * TEMPLATE 4 — AZURILL (inspired by Reactive Resume "Azurill")
+ * Left accent bar, sans-serif, single column, ATS-friendly.
+ * ============================================================ */
+function AzurillTemplate({ resume }: { resume: ResumeState }) {
+  return (
+    <div
+      className="flex h-full w-full text-paper-ink"
+      style={{ fontFamily: '"Inter", system-ui, sans-serif' }}
+    >
+      <div className="w-2 bg-[oklch(0.55_0.18_250)]" />
+      <div className="flex-1 px-12 py-12">
+        <header className="flex items-baseline justify-between border-b border-paper-rule pb-4">
+          <div>
+            <h1 className="text-[30px] font-bold tracking-tight">
+              {resume.fullName || "Your Name"}
+            </h1>
+            <p className="mt-1 text-[12px] font-medium uppercase tracking-[0.2em] text-[oklch(0.55_0.18_250)]">
+              {resume.targetRole || resume.originalRole}
+            </p>
+          </div>
+          <div className="text-right text-[10.5px] leading-relaxed text-paper-muted">
+            {resume.email && <p>{resume.email}</p>}
+            {resume.phone && <p>{resume.phone}</p>}
+            {resume.location && <p>{resume.location}</p>}
+          </div>
+        </header>
+
+        {resume.summary && (
+          <AzSection title="Summary">
+            <p className="text-[12px] leading-[1.7] text-paper-ink/90">{resume.summary}</p>
+          </AzSection>
+        )}
+
+        <AzSection title="Experience">
+          <div className="space-y-4">
+            {resume.experience.map((exp) => (
+              <article key={exp.id}>
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-[13px] font-semibold">
+                    {exp.role}
+                    {exp.company && <span className="font-normal text-paper-muted"> · {exp.company}</span>}
+                  </h3>
+                  {(exp.startDate || exp.endDate) && (
+                    <span className="text-[10.5px] text-paper-muted">
+                      {[exp.startDate, exp.endDate].filter(Boolean).join(" – ")}
+                    </span>
+                  )}
+                </div>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  {exp.bullets.map((b, i) => (
+                    <li key={i} className="text-[11.5px] leading-[1.6] text-paper-ink/90">{b}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </AzSection>
+
+        {resume.skills.length > 0 && (
+          <AzSection title="Skills">
+            <div className="flex flex-wrap gap-1.5">
+              {resume.skills.map((s, i) => (
+                <span
+                  key={i}
+                  className="rounded border border-paper-rule px-2 py-0.5 text-[10.5px] text-paper-ink/85"
+                >
+                  {s}
+                </span>
+              ))}
+            </div>
+          </AzSection>
+        )}
+      </div>
+    </div>
+  );
+}
+function AzSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6">
+      <h2 className="mb-2 text-[10px] font-bold uppercase tracking-[0.3em] text-[oklch(0.55_0.18_250)]">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/* ============================================================
+ * TEMPLATE 5 — ONYX
+ * Dark slab header, bold, modern corporate.
+ * ============================================================ */
+function OnyxTemplate({ resume }: { resume: ResumeState }) {
+  return (
+    <div
+      className="flex h-full w-full flex-col text-paper-ink"
+      style={{ fontFamily: '"Inter", system-ui, sans-serif' }}
+    >
+      <header className="bg-paper-ink px-12 py-8 text-paper">
+        <h1 className="text-[32px] font-bold leading-tight tracking-tight">
+          {resume.fullName || "Your Name"}
+        </h1>
+        <p className="mt-1 text-[12px] uppercase tracking-[0.25em] opacity-80">
+          {resume.targetRole || resume.originalRole}
+        </p>
+        <p className="mt-3 text-[10.5px] opacity-70">
+          {[resume.email, resume.phone, resume.location].filter(Boolean).join("   |   ")}
+        </p>
+      </header>
+      <div className="flex-1 px-12 py-10">
+        {resume.summary && (
+          <OnyxSection title="Profile">
+            <p className="text-[12px] leading-[1.7] text-paper-ink/90">{resume.summary}</p>
+          </OnyxSection>
+        )}
+        <OnyxSection title="Experience">
+          <div className="space-y-4">
+            {resume.experience.map((exp) => (
+              <article key={exp.id}>
+                <div className="flex items-baseline justify-between">
+                  <h3 className="text-[13.5px] font-semibold">
+                    {exp.role}
+                    {exp.company && <span className="font-normal"> @ {exp.company}</span>}
+                  </h3>
+                  {(exp.startDate || exp.endDate) && (
+                    <span className="text-[10.5px] font-medium text-paper-muted">
+                      {[exp.startDate, exp.endDate].filter(Boolean).join(" – ")}
+                    </span>
+                  )}
+                </div>
+                <ul className="mt-1.5 list-disc space-y-1 pl-5">
+                  {exp.bullets.map((b, i) => (
+                    <li key={i} className="text-[11.5px] leading-[1.6] text-paper-ink/90">{b}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </OnyxSection>
+        {resume.skills.length > 0 && (
+          <OnyxSection title="Skills">
+            <p className="text-[12px] leading-[1.7] text-paper-ink/90">{resume.skills.join(" · ")}</p>
+          </OnyxSection>
+        )}
+      </div>
+    </div>
+  );
+}
+function OnyxSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-6 first:mt-0">
+      <h2 className="mb-2 inline-block bg-paper-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.25em] text-paper">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/* ============================================================
+ * TEMPLATE 6 — RHYHORN
+ * Classic centered serif, conservative ATS, single column.
+ * ============================================================ */
+function RhyhornTemplate({ resume }: { resume: ResumeState }) {
+  return (
+    <div
+      className="flex h-full w-full flex-col px-16 py-14 text-paper-ink"
+      style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+    >
+      <header className="text-center">
+        <h1 className="text-[28px] font-bold tracking-wide">
+          {resume.fullName || "Your Name"}
+        </h1>
+        <p className="mt-1 text-[11px] tracking-wide text-paper-muted">
+          {[resume.email, resume.phone, resume.location].filter(Boolean).join("  •  ")}
+        </p>
+        <p className="mt-1 text-[11px] italic text-paper-muted">
+          {resume.targetRole || resume.originalRole}
+        </p>
+      </header>
+
+      {resume.summary && (
+        <RhSection title="Summary">
+          <p className="text-[12px] leading-[1.7]">{resume.summary}</p>
+        </RhSection>
+      )}
+
+      <RhSection title="Professional Experience">
+        <div className="space-y-4">
+          {resume.experience.map((exp) => (
+            <article key={exp.id}>
+              <div className="flex items-baseline justify-between">
+                <h3 className="text-[13px] font-bold">
+                  {exp.company || exp.role}
+                </h3>
+                {(exp.startDate || exp.endDate) && (
+                  <span className="text-[11px] italic">
+                    {[exp.startDate, exp.endDate].filter(Boolean).join(" – ")}
+                  </span>
+                )}
+              </div>
+              <p className="text-[12px] italic">{exp.role}</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5">
+                {exp.bullets.map((b, i) => (
+                  <li key={i} className="text-[12px] leading-[1.6]">{b}</li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </div>
+      </RhSection>
+
+      {resume.skills.length > 0 && (
+        <RhSection title="Skills">
+          <p className="text-[12px] leading-[1.7]">{resume.skills.join(", ")}</p>
+        </RhSection>
+      )}
+    </div>
+  );
+}
+function RhSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="mt-5">
+      <h2 className="mb-1 border-b border-paper-ink pb-0.5 text-center text-[11px] font-bold uppercase tracking-[0.3em]">
+        {title}
+      </h2>
+      <div className="mt-2">{children}</div>
+    </section>
   );
 }

@@ -27,7 +27,13 @@ export interface ResumeState {
   skills: string[];
 }
 
-export type TemplateId = "executive" | "modern" | "minimalist";
+export type TemplateId =
+  | "executive"
+  | "modern"
+  | "minimalist"
+  | "azurill"
+  | "onyx"
+  | "rhyhorn";
 
 export interface GapAnalysis {
   matching: string[];
