@@ -26,6 +26,7 @@ import { simulateAIAnalysis } from "@/utils/aiMockEngine";
 import { GapAnalysisView } from "@/components/GapAnalysisView";
 import { generateGapAnalysis } from "@/utils/analysisLogic";
 import { Skeleton } from "@/components/ui/skeleton";
+import { exportResumeToPDF } from "@/utils/pdfExport";
 import {
   Tooltip,
   TooltipContent,
@@ -626,12 +627,25 @@ function StepEdit() {
 /* ----------------------------- STEP 3 ----------------------------- */
 
 function StepExport() {
-  const { template, setTemplate } = useResume();
+  const { template, setTemplate, resume } = useResume();
+  const [exporting, setExporting] = useState(false);
 
-  const onDownload = () => {
-    toast.success("System Ready", {
-      description: "PDF rendering engine will be attached in the backend environment.",
-    });
+  const onDownload = async () => {
+    setExporting(true);
+    try {
+      const safeName = (resume.fullName || "resume").replace(/\s+/g, "_");
+      const tplLabel = TEMPLATE_OPTIONS.find((t) => t.id === template)?.label ?? template;
+      await exportResumeToPDF(`${safeName}_${tplLabel}.pdf`);
+      toast.success("PDF generated", {
+        description: `Downloaded as ${safeName}_${tplLabel}.pdf`,
+      });
+    } catch (err) {
+      toast.error("Export failed", {
+        description: err instanceof Error ? err.message : "Unable to render PDF",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -639,11 +653,27 @@ function StepExport() {
       <SectionHeader
         eyebrow="Step 03 · Style & export"
         title="Pick a style, then ship it"
-        description="Three structural templates — switch live, no data loss. Your A4 preview re-renders instantly."
+        description="Six ATS-clean templates — switch live, no data loss. Your A4 preview re-renders instantly and the PDF mirrors it exactly."
       />
 
       <Card title="Select Resume Style">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="mb-4">
+          <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            Quick switch
+          </label>
+          <select
+            value={template}
+            onChange={(e) => setTemplate(e.target.value as TemplateId)}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+          >
+            {TEMPLATE_OPTIONS.map((opt) => (
+              <option key={opt.id} value={opt.id}>
+                {opt.label} — {opt.description}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {TEMPLATE_OPTIONS.map((opt) => {
             const active = template === opt.id;
             return (
@@ -685,10 +715,11 @@ function StepExport() {
         <button
           type="button"
           onClick={onDownload}
-          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-lg transition-transform hover:-translate-y-0.5"
+          disabled={exporting}
+          className="inline-flex items-center gap-2 rounded-xl bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-lg transition-transform hover:-translate-y-0.5 disabled:opacity-60"
         >
-          <Download className="h-4 w-4" />
-          Download PDF
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {exporting ? "Rendering PDF…" : "Download Final Resume"}
         </button>
       </div>
     </div>
@@ -927,6 +958,21 @@ const TEMPLATE_OPTIONS: {
     label: "The Minimalist",
     description: "Sans-serif, generous whitespace.",
   },
+  {
+    id: "azurill",
+    label: "Azurill",
+    description: "Accent bar, pill skills, ATS-clean.",
+  },
+  {
+    id: "onyx",
+    label: "Onyx",
+    description: "Dark slab header, bold corporate.",
+  },
+  {
+    id: "rhyhorn",
+    label: "Rhyhorn",
+    description: "Centered classic serif, conservative.",
+  },
 ];
 
 function TemplateThumb({ id }: { id: TemplateId }) {
@@ -957,6 +1003,58 @@ function TemplateThumb({ id }: { id: TemplateId }) {
           <div className="h-1.5 w-1/2 rounded-sm bg-paper-ink/70" />
           <div className="h-1 w-full rounded-sm bg-paper-ink/15" />
           <div className="h-1 w-5/6 rounded-sm bg-paper-ink/15" />
+        </div>
+      </div>
+    );
+  }
+  if (id === "azurill") {
+    return (
+      <div className="flex aspect-[1/1.2] w-full overflow-hidden rounded-md border border-border bg-paper text-paper-ink shadow-inner">
+        <div className="w-1 bg-[oklch(0.55_0.18_250)]" />
+        <div className="flex-1 p-2 space-y-1">
+          <div className="h-2 w-2/3 rounded-sm bg-paper-ink/80" />
+          <div className="h-1 w-1/3 rounded-sm bg-[oklch(0.55_0.18_250)]/70" />
+          <div className="mt-1.5 space-y-1">
+            <div className="h-0.5 w-full bg-paper-ink/15" />
+            <div className="h-0.5 w-5/6 bg-paper-ink/15" />
+          </div>
+          <div className="mt-1 flex gap-0.5">
+            <span className="h-1 w-3 rounded-sm border border-paper-ink/30" />
+            <span className="h-1 w-4 rounded-sm border border-paper-ink/30" />
+            <span className="h-1 w-3 rounded-sm border border-paper-ink/30" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (id === "onyx") {
+    return (
+      <div className="aspect-[1/1.2] w-full overflow-hidden rounded-md border border-border bg-paper text-paper-ink shadow-inner">
+        <div className="bg-paper-ink p-1.5">
+          <div className="h-1.5 w-2/3 rounded-sm bg-paper/90" />
+          <div className="mt-0.5 h-0.5 w-1/3 rounded-sm bg-paper/60" />
+        </div>
+        <div className="p-2 space-y-1">
+          <div className="inline-block h-1 w-6 bg-paper-ink" />
+          <div className="h-0.5 w-full bg-paper-ink/15" />
+          <div className="h-0.5 w-5/6 bg-paper-ink/15" />
+        </div>
+      </div>
+    );
+  }
+  if (id === "rhyhorn") {
+    return (
+      <div className="aspect-[1/1.2] w-full rounded-md border border-border bg-paper p-2 text-paper-ink shadow-inner">
+        <div className="text-center">
+          <div className="mx-auto h-2 w-2/3 rounded-sm bg-paper-ink/80" />
+          <div className="mx-auto mt-0.5 h-0.5 w-1/3 rounded-sm bg-paper-ink/40" />
+        </div>
+        <div className="mt-2 border-t border-paper-ink/40 pt-1">
+          <div className="mx-auto h-1 w-1/3 rounded-sm bg-paper-ink/60" />
+        </div>
+        <div className="mt-1 space-y-0.5">
+          <div className="h-0.5 w-full bg-paper-ink/15" />
+          <div className="h-0.5 w-5/6 bg-paper-ink/15" />
         </div>
       </div>
     );
