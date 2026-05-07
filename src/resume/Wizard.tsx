@@ -708,9 +708,25 @@ function GapAnalysisPanel() {
     strictMode,
     setStrictMode,
     aiAnalysis,
+    gapReport,
   } = useResume();
   const total = gapAnalysis.matching.length + gapAnalysis.missing.length;
   const matchPct = total === 0 ? 0 : Math.round((gapAnalysis.matching.length / total) * 100);
+
+  // Preferred: rich gap report from generateGapAnalysis().
+  if (gapReport) {
+    return (
+      <GapAnalysisView
+        report={gapReport}
+        strictMode={strictMode}
+        onStrictModeChange={setStrictMode}
+        onProceed={() => {
+          if (!rewritten && !isRewriting) void autoRewrite();
+          else setEditorView("edit");
+        }}
+      />
+    );
+  }
 
   // When the mock AI mapping engine has produced a result, prefer the new
   // 3-column dashboard view (Strong / Transferable / Missing).
