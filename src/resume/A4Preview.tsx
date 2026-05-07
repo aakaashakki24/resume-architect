@@ -13,7 +13,7 @@ const PAGE_W = 816;
 const PAGE_H = Math.round(PAGE_W * 1.414); // 1154
 
 export function A4Preview() {
-  const { resume, template } = useResume();
+  const { resume, template, analyzing } = useResume();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -47,6 +47,7 @@ export function A4Preview() {
           width: PAGE_W * scale,
           height: PAGE_H * scale,
         }}
+        className={`transition-all duration-300 ${analyzing ? "scale-[0.98] opacity-50 blur-[2px]" : ""}`}
       >
         <div
           className="origin-top-left bg-paper text-paper-ink shadow-[0_30px_60px_-20px_rgba(15,23,42,0.35),0_8px_20px_-8px_rgba(15,23,42,0.2)]"
