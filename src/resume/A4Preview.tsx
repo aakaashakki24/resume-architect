@@ -65,10 +65,14 @@ export function A4Preview() {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
               style={{ width: PAGE_W, height: PAGE_H }}
+              id="resume-print-target"
             >
               {template === "executive" && <ExecutiveTemplate resume={resume} />}
               {template === "modern" && <ModernTemplate resume={resume} />}
               {template === "minimalist" && <MinimalistTemplate resume={resume} />}
+              {template === "azurill" && <AzurillTemplate resume={resume} />}
+              {template === "onyx" && <OnyxTemplate resume={resume} />}
+              {template === "rhyhorn" && <RhyhornTemplate resume={resume} />}
             </motion.div>
           </AnimatePresence>
         </div>
@@ -85,6 +89,9 @@ const TEMPLATE_LABEL: Record<TemplateId, string> = {
   executive: "Executive",
   modern: "Modern",
   minimalist: "Minimalist",
+  azurill: "Azurill",
+  onyx: "Onyx",
+  rhyhorn: "Rhyhorn",
 };
 
 /* ============================================================
