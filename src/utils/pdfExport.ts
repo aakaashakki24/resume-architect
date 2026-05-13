@@ -16,7 +16,19 @@ import html2canvas from "html2canvas-pro";
 const PAGE_W_PX = 816; // matches A4Preview design width
 const PAGE_H_PX = Math.round(PAGE_W_PX * 1.414); // 1154
 
-export async function exportResumeToPDF(filename: string) {
+export type ExportOptions = {
+  /** Page margin in millimeters (applied on all four sides). 0–25mm. */
+  marginMm?: number;
+  /** Content scale factor (0.6–1.1). <1 fits more vertical content per page. */
+  scale?: number;
+};
+
+export async function exportResumeToPDF(
+  filename: string,
+  opts: ExportOptions = {},
+) {
+  const marginMm = clamp(opts.marginMm ?? 10, 0, 25);
+  const scale = clamp(opts.scale ?? 1, 0.6, 1.1);
   const source = document.querySelector<HTMLElement>(
     "#resume-print-target > *",
   );
@@ -60,22 +72,31 @@ export async function exportResumeToPDF(filename: string) {
     });
 
     const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-    const pageWmm = pdf.internal.pageSize.getWidth(); // 210
-    const pageHmm = pdf.internal.pageSize.getHeight(); // 297
+    const pdfWmm = pdf.internal.pageSize.getWidth(); // 210
+    const pdfHmm = pdf.internal.pageSize.getHeight(); // 297
+    const printWmm = pdfWmm - 2 * marginMm;
+    const printHmm = pdfHmm - 2 * marginMm;
 
-    // px-per-page in the rendered canvas (canvas was scaled 2x).
-    const pxPerPage = PAGE_H_PX * 2;
-    const totalPages = Math.max(1, Math.ceil(canvas.height / pxPerPage));
+    // Drawn content width on the PDF page (mm). When scale<1 we shrink the
+    // content uniformly inside the printable area so it occupies less width
+    // (and proportionally less height per source-pixel) — this fits MORE
+    // vertical content per page. A4 aspect of the page itself never changes.
+    const drawWmm = printWmm * scale;
+    const mmPerSrcPx = drawWmm / canvas.width;
+    const srcPxPerPage = Math.max(1, Math.floor(printHmm / mmPerSrcPx));
+    const totalPages = Math.max(1, Math.ceil(canvas.height / srcPxPerPage));
+    const xOffsetMm = marginMm + (printWmm - drawWmm) / 2; // center horizontally
 
     const sliceCanvas = document.createElement("canvas");
     sliceCanvas.width = canvas.width;
-    sliceCanvas.height = pxPerPage;
+    sliceCanvas.height = srcPxPerPage;
     const ctx = sliceCanvas.getContext("2d")!;
 
     for (let i = 0; i < totalPages; i++) {
-      const sy = i * pxPerPage;
-      const sliceHeight = Math.min(pxPerPage, canvas.height - sy);
+      const sy = i * srcPxPerPage;
+      const sliceHeight = Math.min(srcPxPerPage, canvas.height - sy);
 
+      sliceCanvas.height = sliceHeight;
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
       ctx.drawImage(
@@ -92,14 +113,16 @@ export async function exportResumeToPDF(filename: string) {
 
       const imgData = sliceCanvas.toDataURL("image/png");
       if (i > 0) pdf.addPage();
-      // Map full slice → full A4. Last (short) slice keeps proportional height
-      // so content isn't stretched.
-      const drawHmm = (sliceHeight / pxPerPage) * pageHmm;
-      pdf.addImage(imgData, "PNG", 0, 0, pageWmm, drawHmm);
+      const drawHmm = sliceHeight * mmPerSrcPx;
+      pdf.addImage(imgData, "PNG", xOffsetMm, marginMm, drawWmm, drawHmm);
     }
 
     pdf.save(filename);
   } finally {
     document.body.removeChild(stage);
   }
+}
+
+function clamp(n: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, n));
 }

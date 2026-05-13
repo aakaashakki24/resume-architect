@@ -94,6 +94,39 @@ const TEMPLATE_LABEL: Record<TemplateId, string> = {
   rhyhorn: "Rhyhorn",
 };
 
+/**
+ * TemplateContent — bare template render without the A4 page chrome.
+ * Used by the off-screen / preview / PDF pipelines that need to flow
+ * content at natural height (multi-page).
+ */
+export function TemplateContent({
+  template,
+  resume,
+}: {
+  template: TemplateId;
+  resume: ResumeState;
+}) {
+  switch (template) {
+    case "executive":
+      return <ExecutiveTemplate resume={resume} />;
+    case "modern":
+      return <ModernTemplate resume={resume} />;
+    case "minimalist":
+      return <MinimalistTemplate resume={resume} />;
+    case "azurill":
+      return <AzurillTemplate resume={resume} />;
+    case "onyx":
+      return <OnyxTemplate resume={resume} />;
+    case "rhyhorn":
+      return <RhyhornTemplate resume={resume} />;
+    default:
+      return null;
+  }
+}
+
+export const A4_DESIGN_WIDTH_PX = PAGE_W;
+export const A4_DESIGN_HEIGHT_PX = PAGE_H;
+
 /* ============================================================
  * TEMPLATE 1 — THE EXECUTIVE
  * Serif, single column, heavy top borders, traditional.
