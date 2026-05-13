@@ -27,6 +27,8 @@ import { GapAnalysisView } from "@/components/GapAnalysisView";
 import { generateGapAnalysis } from "@/utils/analysisLogic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportResumeToPDF } from "@/utils/pdfExport";
+import { exportATSResumePDF } from "@/utils/atsPdfRenderer";
+import { generateATSResume } from "@/lib/atsResume.functions";
 import { ExportPreview } from "@/components/ExportPreview";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -633,6 +635,38 @@ function StepExport() {
   const [exporting, setExporting] = useState(false);
   const [marginMm, setMarginMm] = useState(10);
   const [scale, setScale] = useState(1);
+  const [atsBusy, setAtsBusy] = useState(false);
+  const [atsMarkdown, setAtsMarkdown] = useState<string>("");
+  const [jdForAts, setJdForAts] = useState("");
+  const [seniority, setSeniority] = useState<"entry" | "mid" | "senior">("mid");
+
+  const onDownloadATS = async () => {
+    setAtsBusy(true);
+    try {
+      const resumeJson = JSON.stringify(resume, null, 2);
+      const { markdown, error } = await generateATSResume({
+        data: { resumeJson, jobDescription: jdForAts, seniority },
+      });
+      if (error || !markdown) {
+        toast.error("ATS generation failed", {
+          description: error ?? "Empty response",
+        });
+        return;
+      }
+      setAtsMarkdown(markdown);
+      const safeName = (resume.fullName || "resume").replace(/\s+/g, "_");
+      await exportATSResumePDF(`${safeName}_ATS.pdf`, markdown);
+      toast.success("ATS resume generated", {
+        description: `Downloaded as ${safeName}_ATS.pdf`,
+      });
+    } catch (err) {
+      toast.error("ATS export failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    } finally {
+      setAtsBusy(false);
+    }
+  };
 
   const onDownload = async () => {
     setExporting(true);
@@ -789,6 +823,70 @@ function StepExport() {
           {exporting ? "Rendering PDF…" : "Download Final Resume"}
         </button>
       </div>
+
+      <Card title="ATS Mode — Syntax AI single-page export">
+        <p className="mb-4 text-[11px] text-muted-foreground">
+          Sends your structured resume to the Syntax AI engine, returns a
+          flawlessly formatted single-column Markdown resume, then renders it
+          to a text-selectable PDF using Helvetica · 1.15 line-height ·
+          single-column · ATS-parseable.
+        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Seniority
+            </label>
+            <select
+              value={seniority}
+              onChange={(e) =>
+                setSeniority(e.target.value as "entry" | "mid" | "senior")
+              }
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            >
+              <option value="entry">Entry-level</option>
+              <option value="mid">Mid-level</option>
+              <option value="senior">Senior-level</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              Target JD (optional)
+            </label>
+            <textarea
+              value={jdForAts}
+              onChange={(e) => setJdForAts(e.target.value)}
+              rows={3}
+              placeholder="Paste a target job description to bias the rewrite…"
+              className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+            />
+          </div>
+        </div>
+        <div className="mt-4 flex flex-col items-center gap-3">
+          <button
+            type="button"
+            onClick={onDownloadATS}
+            disabled={atsBusy}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 disabled:opacity-70"
+          >
+            {atsBusy ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ShieldCheck className="h-4 w-4" />
+            )}
+            {atsBusy ? "Generating ATS resume…" : "Download ATS Resume"}
+          </button>
+          {atsMarkdown && (
+            <details className="w-full rounded-md border border-border bg-muted/20 p-3 text-xs">
+              <summary className="cursor-pointer font-medium text-muted-foreground">
+                AI Markdown output ({atsMarkdown.length} chars)
+              </summary>
+              <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed text-foreground">
+                {atsMarkdown}
+              </pre>
+            </details>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
