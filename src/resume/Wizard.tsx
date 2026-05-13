@@ -27,6 +27,8 @@ import { GapAnalysisView } from "@/components/GapAnalysisView";
 import { generateGapAnalysis } from "@/utils/analysisLogic";
 import { Skeleton } from "@/components/ui/skeleton";
 import { exportResumeToPDF } from "@/utils/pdfExport";
+import { ExportPreview } from "@/components/ExportPreview";
+import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
   TooltipContent,
@@ -629,13 +631,18 @@ function StepEdit() {
 function StepExport() {
   const { template, setTemplate, resume } = useResume();
   const [exporting, setExporting] = useState(false);
+  const [marginMm, setMarginMm] = useState(10);
+  const [scale, setScale] = useState(1);
 
   const onDownload = async () => {
     setExporting(true);
     try {
       const safeName = (resume.fullName || "resume").replace(/\s+/g, "_");
       const tplLabel = TEMPLATE_OPTIONS.find((t) => t.id === template)?.label ?? template;
-      await exportResumeToPDF(`${safeName}_${tplLabel}.pdf`);
+      await exportResumeToPDF(`${safeName}_${tplLabel}.pdf`, {
+        marginMm,
+        scale,
+      });
       toast.success("PDF generated", {
         description: `Downloaded as ${safeName}_${tplLabel}.pdf`,
       });
@@ -649,7 +656,7 @@ function StepExport() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-8">
+    <div className="mx-auto max-w-3xl space-y-8">
       <SectionHeader
         eyebrow="Step 03 · Style & export"
         title="Pick a style, then ship it"
@@ -702,6 +709,66 @@ function StepExport() {
               </button>
             );
           })}
+        </div>
+      </Card>
+
+      <Card title="Export Settings">
+        <div className="grid gap-6 md:grid-cols-2">
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Page margin
+              </label>
+              <span className="font-mono text-xs text-foreground">
+                {marginMm} mm
+              </span>
+            </div>
+            <Slider
+              min={0}
+              max={25}
+              step={1}
+              value={[marginMm]}
+              onValueChange={(v) => setMarginMm(v[0] ?? 10)}
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              White border on all sides of every A4 page.
+            </p>
+          </div>
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                Page scaling
+              </label>
+              <span className="font-mono text-xs text-foreground">
+                {Math.round(scale * 100)}%
+              </span>
+            </div>
+            <Slider
+              min={60}
+              max={110}
+              step={5}
+              value={[Math.round(scale * 100)]}
+              onValueChange={(v) => setScale((v[0] ?? 100) / 100)}
+            />
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Smaller scale = more content per page. A4 aspect locked.
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      <Card title="Live PDF Preview">
+        <p className="mb-4 text-[11px] text-muted-foreground">
+          Mirrors what the exported PDF will look like with the current margin
+          and scale. Each thumbnail is one A4 page.
+        </p>
+        <div className="max-h-[420px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
+          <ExportPreview
+            template={template}
+            resume={resume}
+            marginMm={marginMm}
+            scale={scale}
+          />
         </div>
       </Card>
 
