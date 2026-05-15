@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ATS_BASE_SIZES,
   parseATSMarkdown,
@@ -23,7 +23,7 @@ export function ATSPreview({
   markdown,
   marginMm,
   fontScale,
-  displayWidthPx = 720,
+  displayWidthPx,
 }: {
   markdown: string;
   marginMm: number;
@@ -31,9 +31,27 @@ export function ATSPreview({
   displayWidthPx?: number;
 }) {
   const blocks = useMemo(() => parseATSMarkdown(markdown), [markdown]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [autoWidth, setAutoWidth] = useState<number>(displayWidthPx ?? 600);
+
+  useEffect(() => {
+    if (displayWidthPx) return; // explicit override wins
+    const el = containerRef.current;
+    if (!el) return;
+    const compute = () => {
+      const w = el.clientWidth;
+      if (w > 0) setAutoWidth(Math.min(w, 720));
+    };
+    compute();
+    const ro = new ResizeObserver(compute);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [displayWidthPx]);
+
+  const widthPx = displayWidthPx ?? autoWidth;
 
   // mm → px scale for the preview
-  const mmToPx = displayWidthPx / A4_W_MM;
+  const mmToPx = widthPx / A4_W_MM;
   const pageHeightPx = A4_H_MM * mmToPx;
   const padPx = marginMm * mmToPx;
   const sectionGapPx = 4.2 * mmToPx;
@@ -41,11 +59,11 @@ export function ATSPreview({
   const sizePx = (basePt: number) => basePt * fontScale * PT_TO_PX;
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div ref={containerRef} className="flex w-full flex-col items-center gap-3">
       <div
         className="relative bg-white text-black shadow-[0_8px_24px_-12px_rgba(15,23,42,0.45)] ring-1 ring-border"
         style={{
-          width: displayWidthPx,
+          width: widthPx,
           minHeight: pageHeightPx,
           paddingTop: padPx,
           paddingBottom: padPx,
