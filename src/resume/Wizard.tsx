@@ -30,6 +30,7 @@ import { exportResumeToPDF } from "@/utils/pdfExport";
 import { exportATSResumePDF } from "@/utils/atsPdfRenderer";
 import { generateATSResume } from "@/lib/atsResume.functions";
 import { ExportPreview } from "@/components/ExportPreview";
+import { ATSPreview } from "@/components/ATSPreview";
 import { Slider } from "@/components/ui/slider";
 import {
   Tooltip,
@@ -639,8 +640,11 @@ function StepExport() {
   const [atsMarkdown, setAtsMarkdown] = useState<string>("");
   const [jdForAts, setJdForAts] = useState("");
   const [seniority, setSeniority] = useState<"entry" | "mid" | "senior">("mid");
+  const [atsMarginMm, setAtsMarginMm] = useState(14);
+  const [atsFontScale, setAtsFontScale] = useState(1);
+  const [atsDownloading, setAtsDownloading] = useState(false);
 
-  const onDownloadATS = async () => {
+  const onGenerateATS = async () => {
     setAtsBusy(true);
     try {
       const resumeJson = JSON.stringify(resume, null, 2);
@@ -654,17 +658,38 @@ function StepExport() {
         return;
       }
       setAtsMarkdown(markdown);
-      const safeName = (resume.fullName || "resume").replace(/\s+/g, "_");
-      await exportATSResumePDF(`${safeName}_ATS.pdf`, markdown);
-      toast.success("ATS resume generated", {
-        description: `Downloaded as ${safeName}_ATS.pdf`,
+      toast.success("ATS resume ready", {
+        description: "Tweak margins & font scale, then download.",
       });
     } catch (err) {
-      toast.error("ATS export failed", {
+      toast.error("ATS generation failed", {
         description: err instanceof Error ? err.message : "Unknown error",
       });
     } finally {
       setAtsBusy(false);
+    }
+  };
+
+  const onDownloadATS = async () => {
+    if (!atsMarkdown) return;
+    setAtsDownloading(true);
+    try {
+      const safeName = (resume.fullName || "resume").replace(/\s+/g, "_");
+      await exportATSResumePDF(`${safeName}_ATS.pdf`, atsMarkdown, {
+        marginMm: atsMarginMm,
+        fontScale: atsFontScale,
+      });
+      toast.success("ATS PDF downloaded", {
+        description: `${safeName}_ATS.pdf · ${atsMarginMm}mm · ${Math.round(
+          atsFontScale * 100,
+        )}%`,
+      });
+    } catch (err) {
+      toast.error("ATS download failed", {
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
+    } finally {
+      setAtsDownloading(false);
     }
   };
 
@@ -864,7 +889,7 @@ function StepExport() {
         <div className="mt-4 flex flex-col items-center gap-3">
           <button
             type="button"
-            onClick={onDownloadATS}
+            onClick={onGenerateATS}
             disabled={atsBusy}
             className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition-transform hover:-translate-y-0.5 disabled:opacity-70"
           >
@@ -873,7 +898,11 @@ function StepExport() {
             ) : (
               <ShieldCheck className="h-4 w-4" />
             )}
-            {atsBusy ? "Generating ATS resume…" : "Download ATS Resume"}
+            {atsBusy
+              ? "Generating ATS resume…"
+              : atsMarkdown
+                ? "Regenerate ATS Markdown"
+                : "Generate ATS Resume"}
           </button>
           {atsMarkdown && (
             <details className="w-full rounded-md border border-border bg-muted/20 p-3 text-xs">
@@ -887,6 +916,84 @@ function StepExport() {
           )}
         </div>
       </Card>
+
+      {atsMarkdown && (
+        <>
+          <Card title="ATS PDF Settings">
+            <div className="grid gap-6 md:grid-cols-2">
+              <div>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Page margin
+                  </label>
+                  <span className="font-mono text-xs text-foreground">
+                    {atsMarginMm} mm
+                  </span>
+                </div>
+                <Slider
+                  min={6}
+                  max={22}
+                  step={1}
+                  value={[atsMarginMm]}
+                  onValueChange={(v) => setAtsMarginMm(v[0] ?? 14)}
+                />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Tighter margins = more usable space per page.
+                </p>
+              </div>
+              <div>
+                <div className="mb-2 flex items-baseline justify-between">
+                  <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Font scale
+                  </label>
+                  <span className="font-mono text-xs text-foreground">
+                    {Math.round(atsFontScale * 100)}%
+                  </span>
+                </div>
+                <Slider
+                  min={80}
+                  max={115}
+                  step={1}
+                  value={[Math.round(atsFontScale * 100)]}
+                  onValueChange={(v) => setAtsFontScale((v[0] ?? 100) / 100)}
+                />
+                <p className="mt-1.5 text-[11px] text-muted-foreground">
+                  Shrink to keep long resumes on a single page.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card title="ATS On-Screen Preview">
+            <p className="mb-4 text-[11px] text-muted-foreground">
+              Rendered live from the AI Markdown using the same parser as the
+              PDF exporter — what you see is what you download.
+            </p>
+            <div className="max-h-[640px] overflow-y-auto rounded-lg border border-border bg-muted/30 p-4">
+              <ATSPreview
+                markdown={atsMarkdown}
+                marginMm={atsMarginMm}
+                fontScale={atsFontScale}
+              />
+            </div>
+            <div className="mt-5 flex justify-center">
+              <button
+                type="button"
+                onClick={onDownloadATS}
+                disabled={atsDownloading}
+                className="inline-flex items-center gap-2 rounded-xl bg-foreground px-6 py-3 text-sm font-semibold text-background shadow-lg transition-transform hover:-translate-y-0.5 disabled:opacity-60"
+              >
+                {atsDownloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {atsDownloading ? "Rendering ATS PDF…" : "Download ATS PDF"}
+              </button>
+            </div>
+          </Card>
+        </>
+      )}
     </div>
   );
 }

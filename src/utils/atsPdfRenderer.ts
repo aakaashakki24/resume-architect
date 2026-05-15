@@ -12,7 +12,7 @@ import jsPDF from "jspdf";
  *  - All text rendered via jsPDF text APIs → selectable & ATS-parseable.
  */
 
-type Block =
+export type ATSBlock =
   | { kind: "h1"; text: string }
   | { kind: "contact"; lines: string[] }
   | { kind: "h2"; text: string }
@@ -20,17 +20,25 @@ type Block =
   | { kind: "p"; text: string }
   | { kind: "li"; text: string };
 
-const MARGIN_MM = 14;
+export type ATSExportOptions = {
+  /** Page margin in mm (default 14). Applied on all 4 sides. */
+  marginMm?: number;
+  /** Font scale multiplier applied to every type size (default 1). */
+  fontScale?: number;
+};
+
+const DEFAULT_MARGIN_MM = 14;
 const PAGE_W = 210;
 const PAGE_H = 297;
-const CONTENT_W = PAGE_W - MARGIN_MM * 2;
 
-// Typography (pt)
-const SIZE_NAME = 18;
-const SIZE_CONTACT = 9.5;
-const SIZE_H2 = 11;
-const SIZE_H3 = 10;
-const SIZE_BODY = 10;
+// Base typography (pt) — multiplied by fontScale at render time.
+export const ATS_BASE_SIZES = {
+  name: 18,
+  contact: 9.5,
+  h2: 11,
+  h3: 10,
+  body: 10,
+} as const;
 
 const LINE_HEIGHT = 1.15;
 const SECTION_GAP_MM = 4.2; // ~12px equivalent
@@ -72,9 +80,9 @@ function stripInline(s: string): string {
     .trim();
 }
 
-function parseMarkdown(md: string): Block[] {
+export function parseATSMarkdown(md: string): ATSBlock[] {
   const cleaned = stripTables(md).split(/\r?\n/);
-  const blocks: Block[] = [];
+  const blocks: ATSBlock[] = [];
 
   // Detect contact line: first non-heading line containing • | or email/phone.
   let nameSeen = false;
@@ -134,17 +142,30 @@ function parseMarkdown(md: string): Block[] {
   return blocks;
 }
 
-export async function exportATSResumePDF(filename: string, markdown: string) {
-  const blocks = parseMarkdown(markdown);
+export async function exportATSResumePDF(
+  filename: string,
+  markdown: string,
+  options: ATSExportOptions = {},
+) {
+  const marginMm = options.marginMm ?? DEFAULT_MARGIN_MM;
+  const fontScale = options.fontScale ?? 1;
+  const CONTENT_W = PAGE_W - marginMm * 2;
+  const SIZE_NAME = ATS_BASE_SIZES.name * fontScale;
+  const SIZE_CONTACT = ATS_BASE_SIZES.contact * fontScale;
+  const SIZE_H2 = ATS_BASE_SIZES.h2 * fontScale;
+  const SIZE_H3 = ATS_BASE_SIZES.h3 * fontScale;
+  const SIZE_BODY = ATS_BASE_SIZES.body * fontScale;
+
+  const blocks = parseATSMarkdown(markdown);
   const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   pdf.setFont("helvetica", "normal");
 
-  let y = MARGIN_MM;
+  let y = marginMm;
 
   const ensureSpace = (needed: number) => {
-    if (y + needed > PAGE_H - MARGIN_MM) {
+    if (y + needed > PAGE_H - marginMm) {
       pdf.addPage();
-      y = MARGIN_MM;
+      y = marginMm;
     }
   };
 
@@ -167,11 +188,11 @@ export async function exportATSResumePDF(filename: string, markdown: string) {
     const lines = pdf.splitTextToSize(text, wrapW) as string[];
     for (let i = 0; i < lines.length; i++) {
       ensureSpace(lineH);
-      const x = MARGIN_MM + indent + bulletGap;
+      const x = marginMm + indent + bulletGap;
       if (opts.bullet && i === 0) {
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(sizePt);
-        pdf.text("•", MARGIN_MM + indent, y + ptToMm(sizePt) * 0.85);
+        pdf.text("•", marginMm + indent, y + ptToMm(sizePt) * 0.85);
         pdf.setFont("helvetica", opts.bold ? "bold" : "normal");
       }
       if (opts.align === "center") {
@@ -215,7 +236,7 @@ export async function exportATSResumePDF(filename: string, markdown: string) {
         ensureSpace(1.2);
         pdf.setDrawColor(0);
         pdf.setLineWidth(0.3);
-        pdf.line(MARGIN_MM, y, PAGE_W - MARGIN_MM, y);
+        pdf.line(marginMm, y, PAGE_W - marginMm, y);
         y += 1.6;
         break;
       }
